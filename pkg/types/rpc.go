@@ -1,4 +1,4 @@
-package rpc
+package types
 
 type RegisterWorkerArgs struct {
 	Addr string
