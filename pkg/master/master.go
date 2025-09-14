@@ -8,18 +8,22 @@ import (
 )
 
 type Master struct {
-	Mu      sync.Mutex
-	Workers map[int]string
-	NextId  int
+	mu      sync.Mutex
+	workers map[int]string
+	nextId  int
+}
+
+func NewMaster(masterAddr string) *Master {
+	return &Master{workers: make(map[int]string)}
 }
 
 func (m *Master) RegisterWorker(args *types.RegisterWorkerArgs, reply *types.RegisterWorkerReply) error {
-	m.Mu.Lock()
-	defer m.Mu.Unlock()
+	m.mu.Lock()
+	defer m.mu.Unlock()
 
-	m.NextId++
-	id := m.NextId
-	m.Workers[id] = args.Addr
+	m.nextId++
+	id := m.nextId
+	m.workers[id] = args.Addr
 	reply.WorkerID = id
 
 	log.Printf("Woker %d registered in %s\n", id, args.Addr)

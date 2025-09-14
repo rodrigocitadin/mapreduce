@@ -3,14 +3,19 @@ package main
 import (
 	"flag"
 	"fmt"
+
+	"github.com/rodrigocitadin/mapreduce/pkg/worker"
 )
 
 func main() {
-	masterAddr := flag.String("masterAddr", ":1234", "master RPC address")
+	masterAddr := flag.String("masterAddr", ":9991", "master RPC address")
 	workerAddr := flag.String("workerAddr", ":0", "worker RPC address (optional)")
 	flag.Parse()
 
-	fmt.Println("Starting worker...")
-	fmt.Println("Master:", *masterAddr)
-	fmt.Println("Worker:", *workerAddr)
+	fmt.Printf("Starting worker at %s", *workerAddr)
+
+	w := worker.NewWorker(*masterAddr, *workerAddr)
+	w.Start()
+
+	select {}
 }

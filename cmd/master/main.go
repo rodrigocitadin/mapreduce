@@ -11,11 +11,10 @@ import (
 )
 
 func main() {
-	masterAddr := flag.String("masterAddr", ":1234", "address for master RPC server")
-	// nReduce := flag.Int("nReduce", 3, "number of reduce tasks")
+	masterAddr := flag.String("masterAddr", ":9991", "address for master RPC server")
 	flag.Parse()
 
-	master := &master.Master{Workers: make(map[int]string)}
+	master := master.NewMaster(*masterAddr)
 	rpc.Register(master)
 
 	l, err := net.Listen("tcp", *masterAddr)
