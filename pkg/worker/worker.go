@@ -13,6 +13,7 @@ type Worker struct {
 	id         int
 	masterAddr string
 	workerAddr string
+	client     *rpc.Client
 }
 
 func NewWorker(masterAddr, workerAddr string) *Worker {
@@ -27,30 +28,60 @@ func (w *Worker) Start() {
 	if err != nil {
 		log.Fatal("error connecting to master:", err)
 	}
+	w.client = client
 
 	args := &types.RegisterWorkerArgs{Addr: w.workerAddr}
 	reply := &types.RegisterWorkerReply{}
 
-	err = client.Call("Master.RegisterWorker", args, reply)
+	err = w.client.Call("Master.RegisterWorker", args, reply)
 	if err != nil {
 		log.Fatal("error registering:", err)
 	}
 
-	w.id = reply.WorkerID
+	w.id = reply.WorkerId
 	log.Printf("Worker registered with id=%d", w.id)
 
-	go func() {
-		for {
-			hbArgs := &types.HeartbeatArgs{WorkerID: w.id}
-			hbReply := &types.HeartbeatReply{}
+	go w.heartbeatLoop()
+	go w.taskLoop()
+}
 
-			err := client.Call("Master.Heartbeat", hbArgs, hbReply)
-			if err != nil {
-				log.Println("heartbeat error:", err)
-				os.Exit(1)
-			}
+func (w *Worker) RequestTask() *types.Task {
+	args := &types.RequestTaskArgs{WorkerId: w.id}
+	reply := &types.RequestTaskReply{}
 
-			time.Sleep(2 * time.Second)
+	err := w.client.Call("Master.RequestTask", args, reply)
+	if err != nil {
+		log.Fatal("Error requesting task:", err)
+	}
+
+	return reply.Task
+}
+
+func (w *Worker) heartbeatLoop() {
+	for {
+		hbArgs := &types.HeartbeatArgs{WorkerId: w.id}
+		hbReply := &types.HeartbeatReply{}
+
+		err := w.client.Call("Master.Heartbeat", hbArgs, hbReply)
+		if err != nil {
+			log.Println("heartbeat error:", err)
+			os.Exit(1)
 		}
-	}()
+
+		time.Sleep(2 * time.Second)
+	}
+}
+
+func (w *Worker) taskLoop() {
+	for {
+		task := w.RequestTask()
+		if task == nil {
+			log.Printf("Worker %d: any task available, waiting...\n", w.id)
+			time.Sleep(2 * time.Second)
+			continue
+		}
+
+		log.Printf("Worker %d: processing task %d (%s)", w.id, task.Id, task.Filename)
+		time.Sleep(3 * time.Second) // simulating processing time
+	}
 }

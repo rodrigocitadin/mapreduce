@@ -4,12 +4,20 @@ type RegisterWorkerArgs struct {
 	Addr string
 }
 type RegisterWorkerReply struct {
-	WorkerID int
+	WorkerId int
 }
 
 type HeartbeatArgs struct {
-	WorkerID int
+	WorkerId int
 }
 type HeartbeatReply struct {
 	Ack bool
+}
+
+type RequestTaskArgs struct {
+	WorkerId int
+}
+
+type RequestTaskReply struct {
+	Task *Task
 }

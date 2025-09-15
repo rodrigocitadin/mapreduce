@@ -15,8 +15,11 @@ func main() {
 	flag.Parse()
 
 	master := master.NewMaster(*masterAddr)
-	rpc.Register(master)
 
+	inputFiles := []string{"input1.txt", "input2.txt", "input3.txt"}
+	master.CreateMapTasks(inputFiles, 2)
+
+	rpc.Register(master)
 	l, err := net.Listen("tcp", *masterAddr)
 	if err != nil {
 		log.Fatal("listen error:", err)
