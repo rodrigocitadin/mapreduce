@@ -32,8 +32,8 @@ type Master struct {
 	done                 chan bool
 }
 
-func NewMaster(masterAddr string) *Master {
-	m := &Master{
+func NewMaster() *Master {
+	return &Master{
 		workers:     make(map[int]string),
 		mapTasks:    make(map[int]*types.Task),
 		reduceTasks: make(map[int]*types.Task),
@@ -41,7 +41,6 @@ func NewMaster(masterAddr string) *Master {
 		phase:       MapPhase,
 		done:        make(chan bool),
 	}
-	return m
 }
 
 func (m *Master) RegisterWorker(args *types.RegisterWorkerArgs, reply *types.RegisterWorkerReply) error {
