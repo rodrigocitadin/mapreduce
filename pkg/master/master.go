@@ -39,7 +39,7 @@ func NewMaster() *Master {
 		reduceTasks: make(map[int]*types.Task),
 		taskQueue:   scheduler.NewTaskQueue(),
 		phase:       MapPhase,
-		done:        make(chan bool),
+		done:        make(chan bool, 1),
 	}
 }
 
