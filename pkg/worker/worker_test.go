@@ -19,7 +19,6 @@ func TestMapF(t *testing.T) {
 
 	result := mapF(contents)
 
-	// Sort both slices for consistent comparison
 	sort.Slice(result, func(i, j int) bool {
 		return result[i].Key < result[j].Key
 	})

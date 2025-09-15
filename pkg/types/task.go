@@ -23,9 +23,9 @@ const (
 type Task struct {
 	Id       int
 	WorkerId int
-	NReduce  int // R, the number of reduce tasks
-	NMap     int // M, the number of map tasks
-	Filename string   // Input file for map tasks
+	NReduce  int    // R, the number of reduce tasks
+	NMap     int    // M, the number of map tasks
+	Filename string // Input file for map tasks
 	Type     TaskType
 	State    TaskState
 }

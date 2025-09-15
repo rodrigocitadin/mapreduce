@@ -68,9 +68,8 @@ func (m *Master) Done() <-chan bool {
 }
 
 func (m *Master) createReduceTasks() {
-	// called with lock held
 	for i := 0; i < m.nReduce; i++ {
-		taskId := i // reduce task id is the partition number
+		taskId := i
 		task := &types.Task{
 			Id:      taskId,
 			NReduce: m.nReduce,

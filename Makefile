@@ -15,4 +15,4 @@ test:
 	go test ./pkg/*
 
 script:
-	sudo ./test-mr.sh
+	./test-mr.sh

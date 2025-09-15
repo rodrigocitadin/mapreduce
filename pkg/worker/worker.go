@@ -19,10 +19,8 @@ import (
 // mapF is the user-defined map function.
 // For word count, it returns a slice of KeyValue pairs, where each key is a word and the value is "1".
 func mapF(contents string) []types.KeyValue {
-	// function to determine if a character is a letter.
 	ff := func(r rune) bool { return !unicode.IsLetter(r) }
 
-	// split contents into a slice of words.
 	words := strings.FieldsFunc(contents, ff)
 
 	kva := []types.KeyValue{}
@@ -36,7 +34,6 @@ func mapF(contents string) []types.KeyValue {
 // reduceF is the user-defined reduce function.
 // For word count, it sums the values for a given key.
 func reduceF(values []string) string {
-	// return the number of occurrences of this word.
 	return fmt.Sprintf("%d", len(values))
 }
 

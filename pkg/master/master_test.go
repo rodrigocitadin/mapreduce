@@ -76,7 +76,7 @@ func TestMasterFullFlow(t *testing.T) {
 	m.mu.Unlock()
 
 	// Simulate workers for Reduce phase
-	for i := 0; i < nReduce; i++ {
+	for i := range nReduce {
 		workerID := i + 10 // Use different worker IDs for clarity
 
 		// Worker requests a task

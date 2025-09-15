@@ -7,16 +7,14 @@ set -e
 # It builds the master and worker, runs them with a larger input,
 # and checks for the final output.
 
-# Function to clean up background processes
+# Function to clean up background processes on exit
 cleanup() {
-    echo "Cleaning up..."
-    # The master process should exit on its own when the job is done.
-    # We kill the workers, which are in an infinite loop.
-    # The '|| true' prevents the script from exiting if no worker processes are found.
-    pkill -f worker || true
+    echo "Cleaning up background processes..."
+    # Kill any running worker processes. The master exits on its own.
+    pkill -f worker 2>/dev/null || true
+    # Remove the compiled binaries
     rm -f master worker
-    rm -rf tmp/ outputs/ final-output.txt
-    echo "Cleanup complete."
+    echo "Cleanup complete. You can inspect the results in the 'outputs/', 'tmp/', and 'final-output.txt' files."
 }
 
 # Trap EXIT signal to ensure cleanup runs
