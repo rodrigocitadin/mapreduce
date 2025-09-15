@@ -13,3 +13,6 @@ master:
 
 test:
 	go test ./pkg/*
+
+script:
+	sudo ./test-mr.sh

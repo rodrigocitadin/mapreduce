@@ -12,7 +12,7 @@ func main() {
 	workerAddr := flag.String("workerAddr", ":0", "worker RPC address (optional)")
 	flag.Parse()
 
-	fmt.Printf("Starting worker at %s", *workerAddr)
+	fmt.Printf("Starting worker at %s\n", *workerAddr)
 
 	w := worker.NewWorker(*masterAddr, *workerAddr)
 	w.Start()

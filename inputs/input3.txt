@@ -1,3 +1,0 @@
-go is fun
-mapreduce in go
-

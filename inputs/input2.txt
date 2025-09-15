@@ -1,3 +1,0 @@
-hello mapreduce
-mapreduce is cool
-

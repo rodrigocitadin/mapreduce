@@ -37,9 +37,15 @@ tmp/
 # .vscode/
 # MapReduce temporary and output files
 mr-intermediate-*
-output/
+outputs/
 tmp/
 final-output.txt
 
 ./master
 ./worker
+# MapReduce temporary and output files
+mr-intermediate-*
+outputs/
+tmp/
+inputs/
+final-output.txt

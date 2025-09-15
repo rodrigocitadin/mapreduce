@@ -52,7 +52,7 @@ func (m *Master) RegisterWorker(args *types.RegisterWorkerArgs, reply *types.Reg
 	m.workers[id] = args.Addr
 	reply.WorkerId = id
 
-	log.Printf("Woker %d registered in %s\n", id, args.Addr)
+	log.Printf("Worker %d registered in %s\n", id, args.Addr)
 	return nil
 }
 
