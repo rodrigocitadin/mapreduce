@@ -10,3 +10,6 @@ worker:
 
 master:
 	go run ./cmd/master/main.go --masterAddr $(MASTER_ADDR)
+
+test:
+	go test ./pkg/*
