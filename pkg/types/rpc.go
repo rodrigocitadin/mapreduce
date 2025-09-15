@@ -21,3 +21,13 @@ type RequestTaskArgs struct {
 type RequestTaskReply struct {
 	Task *Task
 }
+
+type ReportTaskArgs struct {
+	WorkerId int
+	TaskId   int
+	TaskType TaskType
+}
+
+type ReportTaskReply struct {
+	Ack bool
+}

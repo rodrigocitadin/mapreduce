@@ -25,6 +25,10 @@ func main() {
 		log.Fatal("listen error:", err)
 	}
 
-	fmt.Printf("Starting master at %s", *masterAddr)
-	rpc.Accept(l)
+	fmt.Printf("Starting master at %s\n", *masterAddr)
+
+	go rpc.Accept(l)
+
+	<-master.Done()
+	fmt.Println("MapReduce job finished.")
 }

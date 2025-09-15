@@ -57,6 +57,23 @@ func (w *Worker) RequestTask() *types.Task {
 	return reply.Task
 }
 
+func (w *Worker) ReportTask(task *types.Task) {
+	args := &types.ReportTaskArgs{
+		WorkerId: w.id,
+		TaskId:   task.Id,
+	}
+	reply := &types.ReportTaskReply{}
+
+	err := w.client.Call("Master.ReportTask", args, reply)
+	if err != nil {
+		log.Fatal("Error reporting task:", err)
+	}
+
+	if reply.Ack {
+		log.Printf("Worker %d: reported task %d as completed", w.id, task.Id)
+	}
+}
+
 func (w *Worker) heartbeatLoop() {
 	for {
 		hbArgs := &types.HeartbeatArgs{WorkerId: w.id}
