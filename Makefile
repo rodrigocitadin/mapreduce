@@ -1,18 +1,43 @@
-ifneq (,$(wildcard .env))
-  include ./.env
-  export
-endif
-
+.DEFAULT_GOAL := help
 MASTER_ADDR ?= ":9991"
 
-worker:
-	go run ./cmd/worker/main.go --masterAddr $(MASTER_ADDR)
-
+.PHONY: master
 master:
-	go run ./cmd/master/main.go --masterAddr $(MASTER_ADDR)
+	@echo ">> running master for wordcount example"
+	go run ./examples/wordcount/wordcount.go --role=master --masterAddr $(MASTER_ADDR)
 
+.PHONY: wordcount-worker
+wordcount-worker:
+	@echo ">> running wordcount worker"
+	go run ./examples/wordcount/wordcount.go --role=worker --masterAddr $(MASTER_ADDR) --workerAddr ":1234"
+
+.PHONY: wordcount-submit
+wordcount-submit:
+	@echo ">> submitting wordcount job"
+	go run ./examples/wordcount/wordcount.go --role=submit --masterAddr $(MASTER_ADDR) --inputs ./inputs
+
+.PHONY: test
 test:
+	@echo ">> running tests"
 	go test ./pkg/*
 
+.PHONY: script
 script:
-	./test-mr.sh
+	@echo ">> running end-to-end test script"
+	chmod +x ./test-mr.sh && ./test-mr.sh
+
+.PHONY: help
+help:
+	@echo "Makefile for MapReduce Library"
+	@echo ""
+	@echo "Usage:"
+	@echo "  make master              - Run the master server for the wordcount example."
+	@echo "  make wordcount-worker    - Run a worker for the wordcount example."
+	@echo "  make wordcount-submit    - Submit the wordcount job to the master."
+	@echo "  make test                - Run all go tests."
+	@echo "  make script              - Run the end-to-end integration test."
+	@echo ""
+	@echo "Typical workflow:"
+	@echo "1. In one terminal, run 'make master'."
+	@echo "2. In one or more other terminals, run 'make wordcount-worker'."
+	@echo "3. In another terminal, run 'make wordcount-submit' to start the job."

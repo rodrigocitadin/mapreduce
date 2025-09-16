@@ -9,35 +9,14 @@ import (
 	"net/rpc"
 	"os"
 	"sort"
-	"strings"
 	"time"
-	"unicode"
 
 	"github.com/rodrigocitadin/mapreduce/pkg/types"
 )
 
-// mapF is the user-defined map function.
-// For word count, it returns a slice of KeyValue pairs, where each key is a word and the value is "1".
-func mapF(contents string) []types.KeyValue {
-	ff := func(r rune) bool { return !unicode.IsLetter(r) }
+type MapFunc func(contents string) []types.KeyValue
+type ReduceFunc func(values []string) string
 
-	words := strings.FieldsFunc(contents, ff)
-
-	kva := []types.KeyValue{}
-	for _, w := range words {
-		kv := types.KeyValue{Key: w, Value: "1"}
-		kva = append(kva, kv)
-	}
-	return kva
-}
-
-// reduceF is the user-defined reduce function.
-// For word count, it sums the values for a given key.
-func reduceF(values []string) string {
-	return fmt.Sprintf("%d", len(values))
-}
-
-// ihash uses the FNV-1a hash function to map a key to a reduce task.
 func ihash(key string) int {
 	h := fnv.New32a()
 	h.Write([]byte(key))
@@ -49,19 +28,26 @@ type Worker struct {
 	masterAddr string
 	workerAddr string
 	client     *rpc.Client
+	mapF       MapFunc
+	reduceF    ReduceFunc
 }
 
-func NewWorker(masterAddr, workerAddr string) *Worker {
+func NewWorker(masterAddr, workerAddr string, mapF MapFunc, reduceF ReduceFunc) *Worker {
+	if mapF == nil || reduceF == nil {
+		log.Fatal("Map and Reduce functions cannot be nil")
+	}
 	return &Worker{
 		masterAddr: masterAddr,
 		workerAddr: workerAddr,
+		mapF:       mapF,
+		reduceF:    reduceF,
 	}
 }
 
 func (w *Worker) Start() {
 	client, err := rpc.Dial("tcp", w.masterAddr)
 	if err != nil {
-		log.Fatal("error connecting to master:", err)
+		log.Fatal("Error connecting to master:", err)
 	}
 	w.client = client
 
@@ -70,13 +56,15 @@ func (w *Worker) Start() {
 
 	err = w.client.Call("Master.RegisterWorker", args, reply)
 	if err != nil {
-		log.Fatal("error registering:", err)
+		log.Fatal("Error registering worker:", err)
 	}
 
 	w.id = reply.WorkerId
 	log.Printf("Worker registered with id=%d", w.id)
 
-	go w.heartbeatLoop()
+	// commented for better visualization on terminal
+	// go w.heartbeatLoop()
+
 	go w.taskLoop()
 }
 
@@ -86,9 +74,9 @@ func (w *Worker) RequestTask() *types.Task {
 
 	err := w.client.Call("Master.RequestTask", args, reply)
 	if err != nil {
-		log.Fatal("Error requesting task:", err)
+		log.Println("Error requesting task:", err)
+		return nil
 	}
-
 	return reply.Task
 }
 
@@ -102,7 +90,7 @@ func (w *Worker) ReportTask(task *types.Task) {
 
 	err := w.client.Call("Master.ReportTask", args, reply)
 	if err != nil {
-		log.Fatal("Error reporting task:", err)
+		log.Printf("Error reporting task %d: %v", task.Id, err)
 	}
 
 	if reply.Ack {
@@ -117,28 +105,24 @@ func (w *Worker) heartbeatLoop() {
 
 		err := w.client.Call("Master.Heartbeat", hbArgs, hbReply)
 		if err != nil {
-			log.Println("heartbeat error:", err)
+			log.Println("Heartbeat error, master might be down. Exiting.", err)
 			os.Exit(1)
 		}
-
 		time.Sleep(2 * time.Second)
 	}
 }
 
 func (w *Worker) doMapTask(task *types.Task) {
-	// Read input file content
 	content, err := os.ReadFile(task.Filename)
 	if err != nil {
-		log.Fatalf("cannot read %v: %v", task.Filename, err)
+		log.Fatalf("Cannot read %v: %v", task.Filename, err)
 	}
 
-	// Apply map function
-	kva := mapF(string(content))
+	kva := w.mapF(string(content))
 
-	// Create intermediate files and encoders
 	tmpDir := "tmp"
 	if err := os.MkdirAll(tmpDir, 0755); err != nil {
-		log.Fatalf("cannot create tmp directory: %v", err)
+		log.Fatalf("Cannot create tmp directory: %v", err)
 	}
 
 	intermediateFiles := make([]*os.File, task.NReduce)
@@ -147,29 +131,23 @@ func (w *Worker) doMapTask(task *types.Task) {
 		filename := fmt.Sprintf("%s/mr-intermediate-%d-%d", tmpDir, task.Id, i)
 		file, err := os.Create(filename)
 		if err != nil {
-			log.Fatalf("cannot create intermediate file %s: %v", filename, err)
+			log.Fatalf("Cannot create intermediate file %s: %v", filename, err)
 		}
+		defer file.Close()
 		intermediateFiles[i] = file
 		encoders[i] = json.NewEncoder(file)
 	}
 
-	// Write key-value pairs to intermediate files
 	for _, kv := range kva {
 		reduceTaskIndex := ihash(kv.Key) % task.NReduce
 		err := encoders[reduceTaskIndex].Encode(&kv)
 		if err != nil {
-			log.Fatalf("cannot write to intermediate file: %v", err)
+			log.Fatalf("Cannot write to intermediate file: %v", err)
 		}
-	}
-
-	// Close files
-	for _, file := range intermediateFiles {
-		file.Close()
 	}
 }
 
 func (w *Worker) doReduceTask(task *types.Task) {
-	// Read intermediate files
 	tmpDir := "tmp"
 	intermediate := []types.KeyValue{}
 	for i := 0; i < task.NMap; i++ {
@@ -177,8 +155,10 @@ func (w *Worker) doReduceTask(task *types.Task) {
 		filename := fmt.Sprintf("%s/mr-intermediate-%d-%d", tmpDir, mapTaskIndex, task.Id)
 		file, err := os.Open(filename)
 		if err != nil {
-			log.Printf("Could not open intermediate file %s: %v. It might not exist if no keys were mapped to it.", filename, err)
-			continue
+			if os.IsNotExist(err) {
+				continue
+			}
+			log.Fatalf("Could not open intermediate file %s: %v", filename, err)
 		}
 		dec := json.NewDecoder(file)
 		for {
@@ -186,27 +166,25 @@ func (w *Worker) doReduceTask(task *types.Task) {
 			if err := dec.Decode(&kv); err == io.EOF {
 				break
 			} else if err != nil {
-				log.Fatalf("cannot decode intermediate file: %v", err)
+				log.Fatalf("Cannot decode intermediate file: %v", err)
 			}
 			intermediate = append(intermediate, kv)
 		}
 		file.Close()
 	}
 
-	// Sort by key
 	sort.Slice(intermediate, func(i, j int) bool {
 		return intermediate[i].Key < intermediate[j].Key
 	})
 
-	// Create output file in the output directory
 	outputDir := "outputs"
 	if err := os.MkdirAll(outputDir, 0755); err != nil {
-		log.Fatalf("cannot create output directory: %v", err)
+		log.Fatalf("Cannot create output directory: %v", err)
 	}
 	oname := fmt.Sprintf("%s/mr-out-%d", outputDir, task.Id)
 	ofile, _ := os.Create(oname)
+	defer ofile.Close()
 
-	// Group by key and apply reduce function
 	i := 0
 	for i < len(intermediate) {
 		j := i + 1
@@ -217,29 +195,23 @@ func (w *Worker) doReduceTask(task *types.Task) {
 		for k := i; k < j; k++ {
 			values = append(values, intermediate[k].Value)
 		}
-		output := reduceF(values)
+		output := w.reduceF(values)
 
-		// Write the result to the output file.
 		fmt.Fprintf(ofile, "%v %v\n", intermediate[i].Key, output)
-
 		i = j
 	}
-
-	ofile.Close()
 }
 
 func (w *Worker) taskLoop() {
 	for {
 		task := w.RequestTask()
 		if task == nil {
-			log.Printf("Worker %d: no task available, system might be done.", w.id)
+			log.Printf("Worker %d: no task available, sleeping.", w.id)
 			time.Sleep(2 * time.Second)
-			// In a real scenario, the master might tell the worker to shut down.
-			// For now, the worker will keep polling.
 			continue
 		}
 
-		log.Printf("Worker %d: processing task %d (%s) file: %s", w.id, task.Id, task.Type, task.Filename)
+		log.Printf("Worker %d: processing task %d (%s)", w.id, task.Id, task.Type)
 
 		switch task.Type {
 		case types.MapTaskType:

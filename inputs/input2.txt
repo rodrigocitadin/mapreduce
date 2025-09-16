@@ -1,0 +1,5 @@
+the mapreduce system orchestrates the processing by marshalling the distributed servers
+running the various tasks in parallel managing all communications and data transfers
+between the various parts of the system and providing for redundancy and fault tolerance
+mapreduce is a framework for processing parallelizable problems across large datasets
+using a large number of computers collectively referred to as a cluster

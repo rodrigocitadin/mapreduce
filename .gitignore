@@ -27,25 +27,12 @@ go.work.sum
 # env file
 .env
 
-# MapReduce temporary and output files
-mr-intermediate-*
-outputs/
-tmp/
-
 # Editor/IDE
 # .idea/
 # .vscode/
-# MapReduce temporary and output files
-mr-intermediate-*
-outputs/
-tmp/
-final-output.txt
 
 ./master
 ./worker
 # MapReduce temporary and output files
-mr-intermediate-*
 outputs/
 tmp/
-inputs/
-final-output.txt

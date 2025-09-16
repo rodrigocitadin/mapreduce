@@ -31,3 +31,13 @@ type ReportTaskArgs struct {
 type ReportTaskReply struct {
 	Ack bool
 }
+
+type SubmitJobArgs struct {
+	InputFiles []string
+	NReduce    int
+}
+
+type SubmitJobReply struct {
+	JobId int
+	Ack   bool
+}

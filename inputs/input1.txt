@@ -1,0 +1,4 @@
+mapreduce is a programming model for processing large data sets
+mapreduce is inspired by the map and reduce functions common in functional programming
+the mapreduce model consists of a map procedure which performs filtering and sorting
+and a reduce method which performs a summary operation

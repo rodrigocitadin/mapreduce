@@ -32,7 +32,17 @@ func TestMasterFullFlow(t *testing.T) {
 	m := NewMaster()
 	inputFiles := []string{"input1.txt", "input2.txt"}
 	nReduce := 2
-	m.CreateMapTasks(inputFiles, nReduce)
+
+	// Simulate a job submission
+	submitArgs := &types.SubmitJobArgs{
+		InputFiles: inputFiles,
+		NReduce:    nReduce,
+	}
+	submitReply := &types.SubmitJobReply{}
+	err := m.SubmitJob(submitArgs, submitReply)
+	if err != nil {
+		t.Fatalf("SubmitJob failed: %v", err)
+	}
 
 	// Simulate workers for Map phase
 	for i := 1; i <= len(inputFiles); i++ {
@@ -76,7 +86,7 @@ func TestMasterFullFlow(t *testing.T) {
 	m.mu.Unlock()
 
 	// Simulate workers for Reduce phase
-	for i := range nReduce {
+	for i := 0; i < nReduce; i++ {
 		workerID := i + 10 // Use different worker IDs for clarity
 
 		// Worker requests a task

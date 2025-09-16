@@ -1,43 +1,8 @@
 package worker
 
 import (
-	"reflect"
-	"sort"
 	"testing"
-
-	"github.com/rodrigocitadin/mapreduce/pkg/types"
 )
-
-func TestMapF(t *testing.T) {
-	contents := "hello world goodbye world"
-	expected := []types.KeyValue{
-		{Key: "goodbye", Value: "1"},
-		{Key: "hello", Value: "1"},
-		{Key: "world", Value: "1"},
-		{Key: "world", Value: "1"},
-	}
-
-	result := mapF(contents)
-
-	sort.Slice(result, func(i, j int) bool {
-		return result[i].Key < result[j].Key
-	})
-
-	if !reflect.DeepEqual(result, expected) {
-		t.Errorf("mapF() = %v, want %v", result, expected)
-	}
-}
-
-func TestReduceF(t *testing.T) {
-	values := []string{"1", "1", "1"}
-	expected := "3"
-
-	result := reduceF(values)
-
-	if result != expected {
-		t.Errorf("reduceF() = %v, want %v", result, expected)
-	}
-}
 
 func TestIhash(t *testing.T) {
 	key1 := "hello"
