@@ -1,50 +1,48 @@
 # MapReduce: A Distributed Word Count Implementation
 
-This project is a functional implementation of the MapReduce programming model, written entirely in Go. It demonstrates the core concepts of distributed data processing through the classic word count example, showcasing how large datasets can be processed in parallel across multiple worker nodes, coordinated by a central master.
+This project is a functional implementation of the MapReduce programming model, written entirely in Go. It provides a core library for distributed data processing and includes a classic word count example to demonstrate its capabilities. The system processes large datasets in parallel across multiple worker nodes, coordinated by a central master.
 
 ## What is MapReduce?
 
-MapReduce is a programming model and an associated implementation for processing and generating large data sets with a parallel, distributed algorithm on a cluster. It was originally developed by Google. The model is inspired by the `map` and `reduce` functions common in functional programming.
+MapReduce is a programming model for processing and generating large data sets with a parallel, distributed algorithm on a cluster. A MapReduce job is composed of two main phases:
 
-A MapReduce job is composed of two main phases:
+1.  **Map Phase**: The master node takes the input, partitions it into smaller sub-problems, and distributes them to worker nodes. Each worker applies a `map` function to its sub-problem and writes the intermediate results.
+2.  **Reduce Phase**: The master node signals the workers to start the reduce phase. Each worker collects the intermediate results relevant to its partition, applies a `reduce` function to aggregate the data, and produces the final output.
 
-1.  **Map Phase**: The master node takes the input, partitions it up into smaller sub-problems, and distributes them to worker nodes. A worker node processes its sub-problem and passes the result back to the master.
-2.  **Reduce Phase**: The master node collects the answers to all the sub-problems, combines them in some way, and produces the final output.
-
-The framework handles all the complexities of parallelization, fault tolerance, data distribution, and load balancing.
+The framework handles the complexities of parallelization, fault tolerance, data distribution, and load balancing.
 
 ## How This Project Implements MapReduce
 
-This implementation adheres to the core principles of the MapReduce architecture:
+This implementation is structured as a library (`pkg/`) and a standalone example (`examples/wordcount`):
 
-*   **Master Process (`cmd/master`)**: The central coordinator. It is responsible for:
-    *   Reading input files and creating a set of Map tasks.
-    *   Scheduling tasks to available Worker nodes.
+*   **Master (`pkg/master`)**: The core logic for the central coordinator. It is responsible for:
+    *   Accepting job submissions via RPC.
+    *   Scheduling Map and Reduce tasks to available Worker nodes.
     *   Tracking the state of each task (Idle, InProgress, Completed).
-    *   Transitioning from the Map phase to the Reduce phase once all Map tasks are complete.
+    *   Transitioning from the Map phase to the Reduce phase.
     *   Signaling when the entire job is finished.
 
-*   **Worker Processes (`cmd/worker`)**: The workhorses. A single worker binary can perform both Map and Reduce tasks as assigned by the Master.
-    *   **Map Task**: A worker reads an input file, applies the `mapF` function to generate `(word, "1")` key-value pairs, and partitions these pairs into intermediate files using a hash function.
-    *   **Reduce Task**: A worker reads all intermediate files corresponding to its partition, sorts the key-value pairs, and applies the `reduceF` function to aggregate the counts for each word, writing the final result to an output file.
+*   **Worker (`pkg/worker`)**: The core logic for a worker process. A single worker can perform both Map and Reduce tasks as assigned by the Master. The worker is generic and receives the `mapF` and `reduceF` functions from the specific application (e.g., word count) that uses it.
 
-*   **Communication**: The Master and Workers communicate via Go's built-in `net/rpc` package. Workers periodically send heartbeats and request tasks, while the Master assigns work and tracks progress.
+*   **Word Count Example (`examples/wordcount`)**: A self-contained application that demonstrates the library's usage. It can be run in one of three roles:
+    1.  **Master**: Starts the master server.
+    2.  **Worker**: Starts a worker process, providing it with the word count `map` and `reduce` functions.
+    3.  **Submit**: Connects to the master and submits a job with a directory of input files.
 
 ## Key Features
 
-*   **RPC-Based Communication**: Robust and type-safe communication between the master and workers.
+*   **Library-Based Design**: The core MapReduce logic is decoupled from the specific application, making the framework reusable for other problems.
+*   **RPC-Based Communication**: Robust and type-safe communication between the master and workers using Go's built-in `net/rpc` package.
 *   **Centralized Task Scheduling**: A thread-safe `TaskQueue` implemented with Go channels ensures that workers receive tasks efficiently and concurrently.
-*   **Phase Orchestration**: The master correctly manages the transition from the Map to the Reduce phase, only starting the latter after all Map tasks have successfully completed.
-*   **Automated Testing**: The project includes both unit tests for core logic (`go test`) and a full end-to-end integration test script (`test-mr.sh`) that simulates a real-world scenario with multiple workers.
+*   **Automated Testing**: The project includes unit tests for core library logic (`make test`) and a full end-to-end execution script (`make script`).
 
 ## Project Structure
 
 ```
 /
-├── cmd/
-│   ├── master/          # Main application for the master process
-│   └── worker/          # Main application for the worker process
-├── inputs/              # Directory for input text files (gitignored)
+├── examples/
+│   └── wordcount/       # Self-contained word count application
+├── inputs/              # Directory for input text files
 ├── outputs/             # Directory for final reduce output (gitignored)
 ├── tmp/                 # Directory for intermediate files (gitignored)
 ├── pkg/
@@ -55,7 +53,7 @@ This implementation adheres to the core principles of the MapReduce architecture
 ├── .gitignore
 ├── go.mod
 ├── Makefile             # For easy execution of common tasks
-└── test-mr.sh           # End-to-end test script
+└── run-wordcount.sh     # End-to-end execution script
 ```
 
 ## How to Run
@@ -64,31 +62,46 @@ This implementation adheres to the core principles of the MapReduce architecture
 *   Go (version 1.21 or later)
 *   `make`
 
-### Running the Full Test Script
+### Running the Full Example (Recommended)
 
-This is the easiest way to see the entire system in action. The script automates building, running the master and workers, and verifying the final output.
+This is the easiest way to see the entire system in action. The script automates starting the master and workers, submitting the job, and waiting for completion.
 
 ```sh
 make script
 ```
 
 This command will:
-1.  Clean up any artifacts from previous runs.
-2.  Generate a large input file.
-3.  Build the `master` and `worker` binaries.
-4.  Start the master process in the background.
-5.  Start three worker processes in the background.
-6.  Wait for the master to signal that the job is complete.
-7.  Aggregate the results and verify that the word "mapreduce" is counted correctly.
+1.  Clean up artifacts from any previous runs.
+2.  Start one master process in the background (with logs visible in your terminal).
+3.  Start three worker processes in the background (with logs discarded).
+4.  Submit a job using the files in the `inputs/` directory.
+5.  Wait for the master to signal that the job is complete.
 
-You should see a `Success: Found 'mapreduce' 7 times, as expected.` message at the end.
+After execution, you can inspect the final results in the `outputs/` directory.
 
 ### Running Unit Tests
 
-To run the unit tests for the scheduler, master, and worker logic:
+To run the unit tests for the core library packages:
 
 ```sh
 make test
 ```
 
-This will execute `go test` on all packages within the `pkg/` directory and report a pass or fail status.
+### Running Manually (Step-by-Step)
+
+For debugging or a more hands-on demonstration, you can run the components in separate terminals:
+
+1.  **Terminal 1: Start the Master**
+    ```sh
+    make master
+    ```
+
+2.  **Terminal 2 (and 3, 4...): Start one or more Workers**
+    ```sh
+    make wordcount-worker
+    ```
+
+3.  **Terminal 5: Submit the Job**
+    ```sh
+    make wordcount-submit
+    ```
