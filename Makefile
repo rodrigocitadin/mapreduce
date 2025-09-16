@@ -23,8 +23,8 @@ test:
 
 .PHONY: script
 script:
-	@echo ">> running end-to-end test script"
-	chmod +x ./test-mr.sh && ./test-mr.sh
+	@echo ">> running wordcount example with existing inputs"
+	chmod +x ./run-wordcount.sh && ./run-wordcount.sh
 
 .PHONY: help
 help:
@@ -35,7 +35,7 @@ help:
 	@echo "  make wordcount-worker    - Run a worker for the wordcount example."
 	@echo "  make wordcount-submit    - Submit the wordcount job to the master."
 	@echo "  make test                - Run all go tests."
-	@echo "  make script              - Run the end-to-end integration test."
+	@echo "  make script              - Run the wordcount test with 3 workers."
 	@echo ""
 	@echo "Typical workflow:"
 	@echo "1. In one terminal, run 'make master'."
